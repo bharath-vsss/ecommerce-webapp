@@ -37,7 +37,7 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                     script {
-                        orchestrateDeployment(
+                        awsHelpers(
                             action: 'pushImage', 
                             appVersion: env.APP_VERSION
                         )
@@ -53,7 +53,7 @@ pipeline {
                     file(credentialsId: 'KUBECONFIG_SECRET', variable: 'TEMP_KUBECONFIG')
                 ]) {
                     script {
-                        orchestrateDeployment(
+                        awsHelpers(
                             action: 'deployHelm', 
                             appVersion: env.APP_VERSION, 
                             kubeconfigPath: env.TEMP_KUBECONFIG
