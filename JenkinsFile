@@ -1,0 +1,39 @@
+@Library('my-shared-lib') _
+
+pipeline {
+    agent { label 'worker_node' }
+    
+    stages {
+        // ... Keep your previous Checkout, Build, and Test stages here ...
+
+        stage('Push Image to ECR') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                    script {
+                        orchestrateDeployment(
+                            action: 'pushImage', 
+                            appVersion: env.APP_VERSION
+                        )
+                    }
+                }
+            }
+        }
+
+        stage('Package & Deploy Helm Chart') {
+            steps {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials'],
+                    file(credentialsId: 'KUBECONFIG_SECRET', variable: 'TEMP_KUBECONFIG')
+                ]) {
+                    script {
+                        orchestrateDeployment(
+                            action: 'deployHelm', 
+                            appVersion: env.APP_VERSION, 
+                            kubeconfigPath: env.TEMP_KUBECONFIG
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
