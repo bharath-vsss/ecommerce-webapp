@@ -4,7 +4,6 @@ pipeline {
     agent { label 'worker_node' } 
 
     environment {
-        // Keeps reference variables localized
         IMAGE_NAME = 'studentapp'
     }
 
@@ -42,13 +41,13 @@ pipeline {
 
         stage('Push to ECR & Deploy to K8s') {
             steps {
-                // Unified to use 'aws-creds' to match your cloud environment credentials
+                // Binding changed to use 'KUBECONFIG_SECRET' as your secret file ID
                 withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds'],
-                    file(credentialsId: 'kubeconfig-self-managed', variable: 'KUBECONFIG_FILE')
+                    file(credentialsId: 'KUBECONFIG_SECRET', variable: 'KUBECONFIG_FILE')
                 ]) {
                     script {
-                        // Passing the application version and secret kubeconfig path into the shared library helper
+                        // Passing the dynamically resolved file path to your Shared Library helper
                         awsHelpers(
                             appVersion: env.APP_VERSION, 
                             kubeconfigFile: env.KUBECONFIG_FILE
