@@ -1,0 +1,58 @@
+@Library('my-shared-lib') _
+
+pipeline {
+    agent { label 'worker_node' } 
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', 
+                    credentialsId: 'github_token', 
+                    url: 'https://github.com/bharath-vsss/ecommerce-webapp.git'
+            }
+        }
+
+        stage('Build & Extract Version') {
+            steps {
+                sh 'mvn clean deploy -DskipTests'
+                script {
+                    // Extracting version from pom.xml
+                    env.APP_VERSION = sh(script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout", returnStdout: true).trim()
+                }
+                echo "Detected Version: ${env.APP_VERSION}"
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t studentapp:${env.APP_VERSION} ."
+            }
+        }
+
+        stage('Push to ECR') {
+            steps {
+                // Ensure 'aws-creds' matches the ID in your Jenkins Credentials screenshot
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                    script {
+                        // Calling the shared library function
+                        awsHelpers(appVersion: env.APP_VERSION)
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Cleans up local images and logs out to keep the worker storage clean
+            sh 'docker logout || true'
+            sh "docker rmi studentapp:${env.APP_VERSION} || true"
+        }
+    }
+} // Added missing closing brace for the pipeline
