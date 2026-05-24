@@ -1,0 +1,10 @@
+com\example\ecommerce\model\CartItem.class
+com\example\ecommerce\controller\LoginController.class
+com\example\ecommerce\service\ProductService.class
+com\example\ecommerce\controller\HomeController.class
+com\example\ecommerce\controller\ProductController.class
+com\example\ecommerce\EcommerceApplication.class
+com\example\ecommerce\controller\CartController.class
+com\example\ecommerce\controller\HealthCheckController.class
+com\example\ecommerce\service\CartService.class
+com\example\ecommerce\model\Product.class
