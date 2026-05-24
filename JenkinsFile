@@ -1,18 +1,12 @@
-@Library('my-shared-lib') _
+@Library('my-shared-lib@main') _
 
 pipeline {
-    agent { label 'worker_node' } 
-
-    environment {
-        IMAGE_NAME = 'studentapp'
-    }
-
+    agent { label 'worker_node' }
+    
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', 
-                    credentialsId: 'github_token', 
-                    url: 'https://github.com/bharath-vsss/ecommerce-webapp.git'
+                git branch: 'main', credentialsId: 'github_token', url: 'https://github.com/bharath-vsss/ecommerce-webapp.git'
             }
         }
 
@@ -20,8 +14,8 @@ pipeline {
             steps {
                 sh 'mvn clean install -DskipTests'
                 script {
-                    // Extracting exact project version from pom.xml
-                    env.APP_VERSION = sh(script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout", returnStdout: true).trim()
+                    def appVersion = sh(script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout", returnStdout: true).trim()
+                    env.APP_VERSION = appVersion
                 }
                 echo "Detected Version: ${env.APP_VERSION}"
             }
@@ -35,34 +29,45 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:${env.APP_VERSION} ."
+                sh "docker build -t studentapp:${env.APP_VERSION} ."
             }
         }
 
-        stage('Push to ECR & Deploy to K8s') {
+        stage('Push Image to ECR') {
             steps {
-                // Binding changed to use 'KUBECONFIG_SECRET' as your secret file ID
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                    script {
+                        orchestrateDeployment(
+                            action: 'pushImage', 
+                            appVersion: env.APP_VERSION
+                        )
+                    }
+                }
+            }
+        }
+
+        stage('Package & Deploy Helm Chart') {
+            steps {
                 withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds'],
-                    file(credentialsId: 'KUBECONFIG_SECRET', variable: 'KUBECONFIG_FILE')
+                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials'],
+                    file(credentialsId: 'KUBECONFIG_SECRET', variable: 'TEMP_KUBECONFIG')
                 ]) {
                     script {
-                        // Passing the dynamically resolved file path to your Shared Library helper
-                        awsHelpers(
+                        orchestrateDeployment(
+                            action: 'deployHelm', 
                             appVersion: env.APP_VERSION, 
-                            kubeconfigFile: env.KUBECONFIG_FILE
+                            kubeconfigPath: env.TEMP_KUBECONFIG
                         )
                     }
                 }
             }
         }
     }
-
+    
     post {
         always {
-            // Cleans up local images and logs out to keep the worker node storage clean
-            sh 'docker logout || true'
-            sh "docker rmi ${IMAGE_NAME}:${env.APP_VERSION} || true"
+            sh 'docker logout'
+            sh "docker rmi studentapp:${env.APP_VERSION} || true"
             cleanWs()
         }
     }
