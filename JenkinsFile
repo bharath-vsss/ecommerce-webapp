@@ -14,7 +14,7 @@ pipeline {
 
         stage('Build & Extract Version') {
             steps {
-                sh 'mvn clean deploy -DskipTests'
+                sh 'mvn clean install -DskipTests'
                 script {
                     // Extracting version from pom.xml
                     env.APP_VERSION = sh(script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout", returnStdout: true).trim()
