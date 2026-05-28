@@ -1,0 +1,155 @@
+# Default values for ecommerce app.
+
+replicaCount: 1
+
+image:
+  repository: 818111884800.dkr.ecr.us-east-1.amazonaws.com/ecommerce
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "1.0"
+
+service:
+  type: ClusterIP
+  port: 8081
+  targetPort: 8081
+
+# Probe configurations
+probes:
+  path: /health
+  startup:
+    initialDelaySeconds: 30
+    failureThreshold: 6
+    periodSeconds: 10
+  liveness:
+    periodSeconds: 10
+    timeoutSeconds: 2
+  readiness:
+    periodSeconds: 10
+    timeoutSeconds: 2
+
+# Environment variables from ConfigMaps and Secrets
+envFrom:
+  configMaps:
+    - app-config
+  secrets:
+    - ecommerce-db-secret
+
+# Resource limits and requests
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+   # ... (Keep your existing deployment/service values here)
+
+# Application Configuration
+configData:
+  DB_URL: "jdbc:postgresql://postgres-service:5432/ecommercedb"
+  DB_USERNAME: "postgres"
+  # You can freely add new keys here as your application grows:
+  # APP_ENV: "production"
+  # LOG_LEVEL: "info"
+
+# ... (Keep your existing deployment, service, and configData values here)
+
+# Horizontal Pod Autoscaler Configuration
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 50
+
+# ... (Keep your existing deployment, service, configData, and hpa values here)
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  hosts:
+    - host: ecommerce.com
+      paths:
+        - path: /
+          pathType: Prefix
+          # If this routes to a different service than your main application service,
+          # you can specify it here.
+          serviceName: gateway-service
+          servicePort: 8080
+
+# ... (Keep your ecommerce app, configData, hpa, and ingress configurations here)
+
+# PostgreSQL Database Configuration
+postgres:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: postgres
+    tag: "13"
+    pullPolicy: IfNotPresent
+  
+  config:
+    dbName: "ecommercedb"
+    user: "postgres"
+    secretName: "ecommerce-db-secret"
+    secretKey: "DB_PASSWORD"
+  
+  persistence:
+    claimName: "postgres-pvc"
+    mountPath: "/var/lib/postgresql/data"
+  
+  service:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+
+  # Un-comment or add labels here if you want to enforce specific node scheduling
+  nodeSelector: {}
+    # node-type: database
+
+# ... (Keep your existing values here)
+
+# PostgreSQL Storage Configuration
+postgres:
+  persistence:
+    enabled: true
+    claimName: "postgres-pvc"
+    pvName: "postgres-pv"
+    storageClass: "local"
+    accessMode: "ReadWriteOnce"
+    reclaimPolicy: "Retain"
+    
+    # Capacity settings
+    pvStorage: "5Gi"
+    pvcStorage: "1Gi"
+    
+    # Host path configuration (primarily for local clusters like Minikube)
+    hostPath: "/data/postgres"
+
+# ... (Keep your existing values here)
+
+# ... (Keep your existing values here)
+
+# Student Application Storage Configuration
+studentApp:
+  persistence:
+    enabled: true
+    pvName: "studentapp-pv"
+    pvcName: "studentapp-pvc"      # 👈 Added
+    storageClass: "local"
+    accessMode: "ReadWriteOnce"
+    capacity: "5Gi"
+    pvcStorage: "2Gi"              # 👈 Added
+    hostPath: "/opt/studentapp/data"
+    labels:
+      volume: "test"
+
+# ... (Keep your existing deployment, configData, and persistence values here)
+
+# Application Secrets (Use plain text here; Helm will base64-encode it automatically)
+secretsData:
+  DB_PASSWORD: c2VjcmV0
+

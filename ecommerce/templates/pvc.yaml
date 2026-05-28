@@ -1,0 +1,15 @@
+{{- if .Values.studentApp.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.studentApp.persistence.pvcName }}
+  labels:
+    app: {{ include "ecommerce.fullname" . | default .Release.Name }}
+spec:
+  accessModes:
+    - {{ .Values.studentApp.persistence.accessMode }}
+  storageClassName: {{ .Values.studentApp.persistence.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.studentApp.persistence.pvcStorage }}
+{{- end }}
