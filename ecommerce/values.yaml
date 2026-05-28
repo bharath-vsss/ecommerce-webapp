@@ -153,3 +153,50 @@ studentApp:
 secretsData:
   DB_PASSWORD: c2VjcmV0
 
+# ecommerce/values.yaml
+
+# Configuration for the main application (existing configurations stay here)
+image:
+  repository: "510931056289.dkr.ecr.ap-southeast-2.amazonaws.com/devops_repo/app"
+  tag: "" # Overridden by Jenkins pipeline via --set image.tag
+
+imagePullSecrets:
+  - name: ecr-registry-secret
+
+# --- New Gateway Configuration Sections ---
+gateway:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: "510931056289.dkr.ecr.ap-southeast-2.amazonaws.com/devops_repo/app:0.0.1-SNAPSHOT"
+    tag: "1.0"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+
+  env:
+    ecommerceServiceUrl: "http://ecommerce-service.default.svc.cluster.local:8081"
+
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+  probes:
+    startup:
+      initialDelaySeconds: 20
+      failureThreshold: 6
+      periodSeconds: 5
+    liveness:
+      periodSeconds: 10
+      timeoutSeconds: 2
+    readiness:
+      periodSeconds: 10
+      timeoutSeconds: 2
