@@ -3,7 +3,7 @@
 replicaCount: 1
 
 image:
-  repository: 818111884800.dkr.ecr.us-east-1.amazonaws.com/ecommerce
+  repository: 510931056289.dkr.ecr.ap-southeast-2.amazonaws.com/devops_repo/app:0.0.1-SNAPSHOT
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "1.0"
