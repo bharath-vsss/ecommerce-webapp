@@ -1,22 +1,34 @@
+```groovy
 @Library('my-shared-lib@main') _
 
 pipeline {
+
     agent { label 'worker_node' }
-    
+
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'main', credentialsId: 'github_token', url: 'https://github.com/bharath-vsss/ecommerce-webapp.git'
+                git branch: 'main',
+                    credentialsId: 'github_token',
+                    url: 'https://github.com/bharath-vsss/ecommerce-webapp.git'
             }
         }
 
         stage('Build & Extract Version') {
             steps {
+
                 sh 'mvn clean install -DskipTests'
+
                 script {
-                    def appVersion = sh(script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout", returnStdout: true).trim()
+                    def appVersion = sh(
+                        script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout",
+                        returnStdout: true
+                    ).trim()
+
                     env.APP_VERSION = appVersion
                 }
+
                 echo "Detected Version: ${env.APP_VERSION}"
             }
         }
@@ -35,10 +47,15 @@ pipeline {
 
         stage('Push Image to ECR') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds']
+                ]) {
+
                     script {
-                        awsHelpers(
-                            action: 'pushImage', 
+                        orchestrateDeployment(
+                            action: 'pushImage',
                             appVersion: env.APP_VERSION
                         )
                     }
@@ -48,27 +65,43 @@ pipeline {
 
         stage('Package & Deploy Helm Chart') {
             steps {
+
                 withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds'],
-                    file(credentialsId: 'KUBECONFIG_SECRET', variable: 'TEMP_KUBECONFIG')
+
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'],
+
+                    file(
+                        credentialsId: 'KUBECONFIG_SECRET',
+                        variable: 'TEMP_KUBECONFIG'
+                    )
+
                 ]) {
+
                     script {
-                        awsHelpers(
-                            action: 'deployHelm', 
-                            appVersion: env.APP_VERSION, 
+
+                        orchestrateDeployment(
+                            action: 'deployHelm',
+                            appVersion: env.APP_VERSION,
                             kubeconfigPath: env.TEMP_KUBECONFIG
                         )
+
                     }
                 }
             }
         }
     }
-    
+
     post {
+
         always {
-            sh 'docker logout'
+
+            sh 'docker logout || true'
+
             sh "docker rmi studentapp:${env.APP_VERSION} || true"
+
             cleanWs()
         }
     }
 }
+```
