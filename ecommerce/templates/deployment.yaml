@@ -43,16 +43,20 @@ spec:
             periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
 
-          # Environment variables sources
+          # Correctly Indented and Sanitized Environment Loops
           {{- if .Values.envFrom }}
           envFrom:
+            {{- if .Values.envFrom.configMaps }}
             {{- range .Values.envFrom.configMaps }}
             - configMapRef:
                 name: {{ . }}
             {{- end }}
+            {{- end }}
+            {{- if .Values.envFrom.secrets }}
             {{- range .Values.envFrom.secrets }}
             - secretRef:
                 name: {{ . }}
+            {{- end }}
             {{- end }}
           {{- end }}
 
