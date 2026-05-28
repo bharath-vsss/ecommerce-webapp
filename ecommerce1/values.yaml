@@ -7,7 +7,7 @@ metadata:
 replicaCount: 1
 
 image:
-  repository: 438987840260.dkr.ecr.eu-north-1.amazonaws.com/ecommerce-app
+  repository: 510931056289.dkr.ecr.ap-southeast-2.amazonaws.com/devops_repo/
   tag: "1.0"
   pullPolicy: IfNotPresent
 
